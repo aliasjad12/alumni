@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: alumni-backend
+  template:
+    metadata:
+      labels:
+        app: alumni-backend
+    spec:
+      containers:
+      - name: backend
+        image: aliasjad12/alumni-backend:latest
+        ports:
+        - containerPort: 5000
+        envFrom:
+        - secretRef:
+            name: backend-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  type: NodePort
+  selector:
+    app: alumni-backend
+  ports:
+    - port: 5000
+      targetPort: 5000
