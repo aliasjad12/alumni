@@ -17,6 +17,9 @@ pipeline {
             steps {
                 dir('backend') {
                     script {
+                        // Fix permissions for NPM cache
+                        sh "sudo chown -R $(id -u):$(id -g) ${WORKSPACE}/.npm || true"
+
                         docker.image('node:20').inside("-e NPM_CONFIG_CACHE=${WORKSPACE}/.npm") {
                             sh 'rm -rf node_modules package-lock.json'
                             sh 'npm cache clean --force'
@@ -39,6 +42,9 @@ pipeline {
             steps {
                 dir('alumni-connect-frontend') {
                     script {
+                        // Fix permissions for NPM cache
+                        sh "sudo chown -R $(id -u):$(id -g) ${WORKSPACE}/.npm || true"
+
                         docker.image('node:20').inside("-e NPM_CONFIG_CACHE=${WORKSPACE}/.npm") {
                             sh 'rm -rf node_modules package-lock.json'
                             sh 'npm cache clean --force'
@@ -70,7 +76,7 @@ pipeline {
 
     post {
         always {
-            sh 'docker logout'
+            sh 'docker logout || true'
         }
     }
 }
