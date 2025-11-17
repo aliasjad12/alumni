@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-id')
-        NPM_CONFIG_CACHE = "${WORKSPACE}/.npm" // local cache avoids permission issues
+        // NPM_CONFIG_CACHE will be passed into Docker container explicitly
     }
 
     stages {
@@ -18,8 +18,8 @@ pipeline {
             steps {
                 dir('backend') {
                     script {
-                        docker.image('node:18').inside {
-                            sh 'npm install --legacy-peer-deps'
+                        docker.image('node:18').inside("-e NPM_CONFIG_CACHE=${WORKSPACE}/.npm") {
+                            sh 'npm install --legacy-peer-deps --unsafe-perm'
                             sh 'npm test || echo "No backend tests yet, continuing..."'
                         }
 
@@ -38,8 +38,8 @@ pipeline {
             steps {
                 dir('alumni-connect-frontend') {
                     script {
-                        docker.image('node:18').inside {
-                            sh 'npm install --legacy-peer-deps'
+                        docker.image('node:18').inside("-e NPM_CONFIG_CACHE=${WORKSPACE}/.npm") {
+                            sh 'npm install --legacy-peer-deps --unsafe-perm'
                             sh 'npx cypress run || echo "No frontend tests yet, continuing..."'
                         }
 
