@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     environment {
+        // Docker Hub credentials stored in Jenkins
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-id')
     }
 
@@ -13,7 +14,7 @@ pipeline {
             }
         }
 
-        stage('Backend Build & Test') {
+        stage('Backend Build & Push') {
             steps {
                 dir('backend') {
                     script {
@@ -22,16 +23,20 @@ pipeline {
                             sh 'npm install'
                             sh 'npm test || echo "No backend tests yet, continuing..."'
                         }
-                    }
 
-                    // Build and push backend Docker image on host
-                    sh 'docker build -t aliasjad12/alumni-backend:latest .'
-                    sh 'docker push aliasjad12/alumni-backend:latest'
+                        // Login to Docker Hub and push image
+                        withCredentials([usernamePassword(credentialsId: 'dockerhub-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                            sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
+                        }
+
+                        sh 'docker build -t aliasjad12/alumni-backend:latest .'
+                        sh 'docker push aliasjad12/alumni-backend:latest'
+                    }
                 }
             }
         }
 
-        stage('Frontend Build & Test') {
+        stage('Frontend Build & Push') {
             steps {
                 dir('alumni-connect-frontend') {
                     script {
@@ -39,10 +44,15 @@ pipeline {
                             sh 'npm install'
                             sh 'npx cypress run || echo "No frontend tests yet, continuing..."'
                         }
-                    }
 
-                    sh 'docker build -t aliasjad12/alumni-frontend:latest .'
-                    sh 'docker push aliasjad12/alumni-frontend:latest'
+                        // Login to Docker Hub and push image
+                        withCredentials([usernamePassword(credentialsId: 'dockerhub-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                            sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
+                        }
+
+                        sh 'docker build -t aliasjad12/alumni-frontend:latest .'
+                        sh 'docker push aliasjad12/alumni-frontend:latest'
+                    }
                 }
             }
         }
@@ -55,6 +65,12 @@ pipeline {
                 sh 'kubectl get pods'
                 sh 'kubectl get svc'
             }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker logout'
         }
     }
 }
