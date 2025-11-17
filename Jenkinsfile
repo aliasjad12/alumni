@@ -4,6 +4,7 @@ pipeline {
     environment {
         // Docker Hub credentials stored in Jenkins
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-id')
+        NPM_CONFIG_CACHE = "${WORKSPACE}/.npm" // use workspace-local npm cache
     }
 
     stages {
@@ -18,13 +19,11 @@ pipeline {
             steps {
                 dir('backend') {
                     script {
-                        // Run Node/npm commands inside a Node container
-                        docker.image('node:18').inside {
-                            sh 'npm install'
+                        docker.image('node:18').inside("-u $(id -u):$(id -g)") {
+                            sh 'npm install --legacy-peer-deps'
                             sh 'npm test || echo "No backend tests yet, continuing..."'
                         }
 
-                        // Login to Docker Hub and push image
                         withCredentials([usernamePassword(credentialsId: 'dockerhub-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                             sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
                         }
@@ -40,12 +39,11 @@ pipeline {
             steps {
                 dir('alumni-connect-frontend') {
                     script {
-                        docker.image('node:18').inside {
-                            sh 'npm install'
+                        docker.image('node:18').inside("-u $(id -u):$(id -g)") {
+                            sh 'npm install --legacy-peer-deps'
                             sh 'npx cypress run || echo "No frontend tests yet, continuing..."'
                         }
 
-                        // Login to Docker Hub and push image
                         withCredentials([usernamePassword(credentialsId: 'dockerhub-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                             sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
                         }
