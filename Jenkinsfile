@@ -17,10 +17,12 @@ pipeline {
             steps {
                 dir('backend') {
                     script {
-                        // Fix permissions for NPM cache
-                        sh "sudo chown -R $(id -u):$(id -g) ${WORKSPACE}/.npm || true"
-
                         docker.image('node:20').inside("-e NPM_CONFIG_CACHE=${WORKSPACE}/.npm") {
+                            // Fix permissions inside container
+                            def uid = sh(script: "id -u", returnStdout: true).trim()
+                            def gid = sh(script: "id -g", returnStdout: true).trim()
+                            sh "sudo chown -R ${uid}:${gid} ${WORKSPACE}/.npm || true"
+
                             sh 'rm -rf node_modules package-lock.json'
                             sh 'npm cache clean --force'
                             sh 'npm install --legacy-peer-deps --unsafe-perm'
@@ -42,10 +44,12 @@ pipeline {
             steps {
                 dir('alumni-connect-frontend') {
                     script {
-                        // Fix permissions for NPM cache
-                        sh "sudo chown -R $(id -u):$(id -g) ${WORKSPACE}/.npm || true"
-
                         docker.image('node:20').inside("-e NPM_CONFIG_CACHE=${WORKSPACE}/.npm") {
+                            // Fix permissions inside container
+                            def uid = sh(script: "id -u", returnStdout: true).trim()
+                            def gid = sh(script: "id -g", returnStdout: true).trim()
+                            sh "sudo chown -R ${uid}:${gid} ${WORKSPACE}/.npm || true"
+
                             sh 'rm -rf node_modules package-lock.json'
                             sh 'npm cache clean --force'
                             sh 'npm install --legacy-peer-deps --unsafe-perm'
@@ -76,7 +80,7 @@ pipeline {
 
     post {
         always {
-            sh 'docker logout || true'
+            sh 'docker logout'
         }
     }
 }
