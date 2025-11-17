@@ -17,16 +17,14 @@ pipeline {
             steps {
                 dir('backend') {
                     script {
-                        docker.image('node:20').inside("-e NPM_CONFIG_CACHE=${WORKSPACE}/.npm") {
-                            // Fix permissions inside container
-                            def uid = sh(script: "id -u", returnStdout: true).trim()
-                            def gid = sh(script: "id -g", returnStdout: true).trim()
-                            sh "sudo chown -R ${uid}:${gid} ${WORKSPACE}/.npm || true"
-
-                            sh 'rm -rf node_modules package-lock.json'
-                            sh 'npm cache clean --force'
-                            sh 'npm install --legacy-peer-deps --unsafe-perm'
-                            sh 'npm test || echo "No backend tests yet, continuing..."'
+                        // Run node container as root inside Jenkins workspace to avoid permission issues
+                        docker.image('node:20').inside("--user root -e NPM_CONFIG_CACHE=/tmp/.npm -v /tmp/.npm:/tmp/.npm") {
+                            sh '''
+                                rm -rf node_modules package-lock.json
+                                npm cache clean --force
+                                npm install --legacy-peer-deps --unsafe-perm
+                                npm test || echo "No backend tests yet, continuing..."
+                            '''
                         }
 
                         withCredentials([usernamePassword(credentialsId: 'dockerhub-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
@@ -44,16 +42,13 @@ pipeline {
             steps {
                 dir('alumni-connect-frontend') {
                     script {
-                        docker.image('node:20').inside("-e NPM_CONFIG_CACHE=${WORKSPACE}/.npm") {
-                            // Fix permissions inside container
-                            def uid = sh(script: "id -u", returnStdout: true).trim()
-                            def gid = sh(script: "id -g", returnStdout: true).trim()
-                            sh "sudo chown -R ${uid}:${gid} ${WORKSPACE}/.npm || true"
-
-                            sh 'rm -rf node_modules package-lock.json'
-                            sh 'npm cache clean --force'
-                            sh 'npm install --legacy-peer-deps --unsafe-perm'
-                            sh 'npx cypress run || echo "No frontend tests yet, continuing..."'
+                        docker.image('node:20').inside("--user root -e NPM_CONFIG_CACHE=/tmp/.npm -v /tmp/.npm:/tmp/.npm") {
+                            sh '''
+                                rm -rf node_modules package-lock.json
+                                npm cache clean --force
+                                npm install --legacy-peer-deps --unsafe-perm
+                                npx cypress run || echo "No frontend tests yet, continuing..."
+                            '''
                         }
 
                         withCredentials([usernamePassword(credentialsId: 'dockerhub-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
@@ -80,7 +75,7 @@ pipeline {
 
     post {
         always {
-            sh 'docker logout'
+            sh 'docker logout || true'
         }
     }
 }
