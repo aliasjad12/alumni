@@ -5,10 +5,11 @@ pipeline {
     }
     stages {
         stage('Checkout') {
-            steps {
-                git 'https://github.com/aliasjad12/alumni.git'
-            }
-        }
+    steps {
+        git branch: 'main', url: 'https://github.com/aliasjad12/alumni.git'
+    }
+}
+
         stage('Backend Build & Test') {
             steps {
                 dir('backend') {
