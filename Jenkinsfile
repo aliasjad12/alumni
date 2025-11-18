@@ -63,14 +63,20 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
-            steps {
-                sh 'kubectl apply -f k8s/backend-secrets.yaml'
-                sh 'kubectl apply -f k8s/backend-deployment.yaml'
-                sh 'kubectl apply -f k8s/frontend-deployment.yaml'
-                sh 'kubectl get pods'
-                sh 'kubectl get svc'
-            }
+    steps {
+        withCredentials([file(credentialsId: 'kubeconfig-cred', variable: 'KUBECONFIG_FILE')]) {
+            sh '''
+                export KUBECONFIG=$KUBECONFIG_FILE
+                kubectl apply -f k8s/backend-secrets.yaml --validate=false
+                kubectl apply -f k8s/backend-deployment.yaml --validate=false
+                kubectl apply -f k8s/frontend-deployment.yaml --validate=false
+                kubectl get pods
+                kubectl get svc
+            '''
         }
+    }
+}
+
     }
 
     post {
