@@ -22,10 +22,11 @@ pipeline {
                 dir('backend') {
                     script {
                         docker.image('node:20').inside(
-                            "--user root -e NPM_CONFIG_CACHE=${NPM_CACHE} " +
-                            "-v ${NPM_CACHE}:${NPM_CACHE} " +
-                            "-v ${NODE_MODULES_BACKEND}:/app/node_modules"
-                        ) {
+    "--user root " +
+    "-e NPM_CONFIG_CACHE=${NPM_CACHE} " +
+    "-v ${NPM_CACHE}:${NPM_CACHE} " +
+    "-v ${NODE_MODULES_BACKEND}:${WORKSPACE}/backend/node_modules"
+){
                             sh '''
                                 echo "== FAST BUILD =="
                                 npm install --legacy-peer-deps --unsafe-perm
@@ -49,13 +50,13 @@ pipeline {
                 dir('alumni-connect-frontend') {
                     script {
                         docker.image('node:20').inside(
-                            "--user root " +
-                            "-e NPM_CONFIG_CACHE=${NPM_CACHE} " +
-                            "-v ${NPM_CACHE}:${NPM_CACHE} " +
-                            "-v ${NODE_MODULES_FRONTEND}:/app/node_modules " +
-                            "-e CYPRESS_CACHE_FOLDER=${CYPRESS_CACHE} " +
-                            "-v ${CYPRESS_CACHE}:${CYPRESS_CACHE}"
-                        ) {
+    "--user root " +
+    "-e NPM_CONFIG_CACHE=${NPM_CACHE} " +
+    "-v ${NPM_CACHE}:${NPM_CACHE} " +
+    "-v ${NODE_MODULES_FRONTEND}:${WORKSPACE}/alumni-connect-frontend/node_modules " +
+    "-e CYPRESS_CACHE_FOLDER=${CYPRESS_CACHE} " +
+    "-v ${CYPRESS_CACHE}:${CYPRESS_CACHE}"
+) {
                             sh '''
                                 echo "== FAST FRONTEND BUILD =="
                                 npm install --legacy-peer-deps --unsafe-perm
