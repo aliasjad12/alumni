@@ -56,7 +56,7 @@ const Login = () => {
           />
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white py-2 rounded"
+            className="w-full bg-black-500 text-white py-2 rounded"
           >
             Login
           </button>
