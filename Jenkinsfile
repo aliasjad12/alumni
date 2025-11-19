@@ -3,6 +3,10 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-id')
+        NPM_CACHE = "${WORKSPACE}/.npm-cache"
+        NODE_MODULES_BACKEND = "${WORKSPACE}/backend/node_modules"
+        NODE_MODULES_FRONTEND = "${WORKSPACE}/alumni-connect-frontend/node_modules"
+        CYPRESS_CACHE = "${WORKSPACE}/.cache/Cypress"
     }
 
     stages {
@@ -17,13 +21,15 @@ pipeline {
             steps {
                 dir('backend') {
                     script {
-                        // Run node container as root inside Jenkins workspace to avoid permission issues
-                        docker.image('node:20').inside("--user root -e NPM_CONFIG_CACHE=/tmp/.npm -v /tmp/.npm:/tmp/.npm") {
+                        docker.image('node:20').inside(
+                            "--user root -e NPM_CONFIG_CACHE=${NPM_CACHE} " +
+                            "-v ${NPM_CACHE}:${NPM_CACHE} " +
+                            "-v ${NODE_MODULES_BACKEND}:/app/node_modules"
+                        ) {
                             sh '''
-                                rm -rf node_modules package-lock.json
-                                npm cache clean --force
+                                echo "== FAST BUILD =="
                                 npm install --legacy-peer-deps --unsafe-perm
-                                npm test || echo "No backend tests yet, continuing..."
+                                npm test || echo "No backend tests yet"
                             '''
                         }
 
@@ -42,12 +48,18 @@ pipeline {
             steps {
                 dir('alumni-connect-frontend') {
                     script {
-                        docker.image('node:20').inside("--user root -e NPM_CONFIG_CACHE=/tmp/.npm -v /tmp/.npm:/tmp/.npm") {
+                        docker.image('node:20').inside(
+                            "--user root " +
+                            "-e NPM_CONFIG_CACHE=${NPM_CACHE} " +
+                            "-v ${NPM_CACHE}:${NPM_CACHE} " +
+                            "-v ${NODE_MODULES_FRONTEND}:/app/node_modules " +
+                            "-e CYPRESS_CACHE_FOLDER=${CYPRESS_CACHE} " +
+                            "-v ${CYPRESS_CACHE}:${CYPRESS_CACHE}"
+                        ) {
                             sh '''
-                                rm -rf node_modules package-lock.json
-                                npm cache clean --force
+                                echo "== FAST FRONTEND BUILD =="
                                 npm install --legacy-peer-deps --unsafe-perm
-                                npx cypress run || echo "No frontend tests yet, continuing..."
+                                npx cypress run || echo "No Cypress tests"
                             '''
                         }
 
@@ -63,20 +75,19 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
-    steps {
-        withCredentials([file(credentialsId: 'kubeconfig-cred', variable: 'KUBECONFIG_FILE')]) {
-            sh '''
-                export KUBECONFIG=$KUBECONFIG_FILE
-                kubectl apply -f k8s/backend-secrets.yaml --validate=false
-                kubectl apply -f k8s/backend-deployment.yaml --validate=false
-                kubectl apply -f k8s/frontend-deployment.yaml --validate=false
-                kubectl get pods
-                kubectl get svc
-            '''
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig-cred', variable: 'KUBECONFIG_FILE')]) {
+                    sh '''
+                        export KUBECONFIG=$KUBECONFIG_FILE
+                        kubectl apply -f k8s/backend-secrets.yaml --validate=false
+                        kubectl apply -f k8s/backend-deployment.yaml --validate=false
+                        kubectl apply -f k8s/frontend-deployment.yaml --validate=false
+                        kubectl get pods
+                        kubectl get svc
+                    '''
+                }
+            }
         }
-    }
-}
-
     }
 
     post {
